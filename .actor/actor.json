@@ -1,12 +1,36 @@
 {
 	"actorSpecification": 1,
 	"name": "ai-finance-monitoring-agent",
-	"title": "Empty Python project",
-	"description": "Empty project in Python.",
+	"title": "AI Finance Monitoring Agent",
+	"description": "AI agent that generates an extensive financial research report on a company.",
 	"version": "0.0",
 	"buildTag": "latest",
 	"meta": {
 		"templateId": "python-empty"
 	},
-	"dockerfile": "./Dockerfile"
+	"dockerfile": "./Dockerfile",
+	"storages": {
+		"dataset": {
+			"actorSpecification": 1,
+			"views": {
+				"overview": {
+					"title": "Overview",
+					"transformation": {
+						"fields": [
+							"report"
+						]
+					},
+					"display": {
+						"component": "table",
+						"properties": {
+							"Report": {
+								"field": "report",
+								"format": "text"
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }

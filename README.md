@@ -1,66 +1,60 @@
-## Python empty template
+A powerful AI-driven financial research and monitoring tool built on the Apify platform. This agent automatically generates comprehensive financial analysis reports for publicly traded companies by aggregating data from multiple sources and using AI to synthesize insights.
 
-Start a new [web scraping](https://apify.com/web-scraping) project quickly and easily in Python with our empty project template. It provides a basic structure for the [Actor](https://apify.com/actors) with [Apify SDK](https://docs.apify.com/sdk/python/) and allows you to easily add your own functionality.
+## Overview
 
-## Included features
+The AI Finance Monitoring Agent collects data from various financial and business intelligence sources to create detailed financial analysis reports for any publicly traded company. It leverages AI to transform raw financial data into actionable investment insights, comparative market analysis, and performance evaluations.
 
-- **[Apify SDK](https://docs.apify.com/sdk/python/)** for Python - a toolkit for building Apify [Actors](https://apify.com/actors) and scrapers in Python
-- **[Input schema](https://docs.apify.com/platform/actors/development/input-schema)** - define and easily validate a schema for your Actor's input
-- **[Request queue](https://docs.apify.com/sdk/python/docs/concepts/storages#working-with-request-queues)** - queues into which you can put the URLs you want to scrape
-- **[Dataset](https://docs.apify.com/sdk/python/docs/concepts/storages#working-with-datasets)** - store structured data where each object stored has the same attributes
+## Features
 
-## How it works
+- **Automated Financial Research**: Generate comprehensive market reports for any publicly traded company using just the ticker symbol
+- **Multi-Source Data Aggregation**: Collects and synthesizes data from:
+  - Yahoo Finance (stock prices, market metrics, financial ratios)
+  - LinkedIn company profiles (company information, employee count, specialties)
+  - Crunchbase (funding information, investors, business details)
+  - Sector-specific index data for comparative analysis
+  - S&P 500 benchmark data
+- **Comparative Market Analysis**: Automatically compares company performance against sector indices and the S&P 500
+- **AI-Powered Report Generation**: Uses Google's Gemini 2.0 Flash model to synthesize collected data into readable, insightful reports
+- **Historical Analysis**: Analyze performance over customizable timeframes (1-365 days)
+- **Exportable Results**: Reports generated in Markdown format for easy integration into research workflows
 
-Insert your own code to `async with Actor:` block. You can use the [Apify SDK](https://docs.apify.com/sdk/python/) with any other Python library.
+## Input
 
-## Resources
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `company_ticker` | String | Stock ticker symbol of the company to analyze | Required |
+| `past_days` | Integer | Number of past days to analyze (1-365) | 7 |
 
-- [Python tutorials in Academy](https://docs.apify.com/academy/python)
-- [Video guide on getting data using Apify API](https://www.youtube.com/watch?v=ViYYDHSBAKM)
-- [Integration with Make, GitHub, Zapier, Google Drive, and other apps](https://apify.com/integrations)
-- A short guide on how to build web scrapers using code templates:
-
-[web scraper template](https://www.youtube.com/watch?v=u-i-Korzf8w)
-
-
-## Getting started
-
-For complete information [see this article](https://docs.apify.com/platform/actors/development#build-actor-locally). To run the actor use the following command:
-
-```bash
-apify run
+Example input:
+```json
+{
+  "company_ticker": "AAPL",
+  "past_days": 30
+}
 ```
 
-## Deploy to Apify
+## How It Works
 
-### Connect Git repository to Apify
+1. **Data Collection**: The agent collects financial data from Yahoo Finance, LinkedIn, and Crunchbase for the specified company
+2. **Index Analysis**: Retrieves relevant sector index data and S&P 500 data for comparative analysis
+3. **AI Processing**: Utilizes Gemini 2.0 Flash to analyze the collected data and generate insights
+4. **Report Generation**: Creates a detailed markdown report with financial analysis, market trends, and comparative performance
+5. **Storage**: Saves the report to the Apify key-value store and pushes structured data to the dataset
 
-If you've created a Git repository for the project, you can easily connect to Apify:
+## Output Format
 
-1. Go to [Actor creation page](https://console.apify.com/actors/new)
-2. Click on **Link Git Repository** button
+The agent produces two outputs:
 
-### Push project on your local machine to Apify
+1. **Markdown Report**: A comprehensive financial analysis report saved in the key-value store
+2. **Structured Data**: A JSON object with all collected and analyzed data pushed to the dataset
 
-You can also deploy the project on your local machine to Apify without the need for the Git repository.
+## Dependencies
 
-1. Log in to Apify. You will need to provide your [Apify API Token](https://console.apify.com/account/integrations) to complete this action.
+- `apify` & `apify-client`: For integration with the Apify platform
+- `pydantic-ai`: For AI model integration and structured data handling
+- `python-dotenv`: For environment variable management
+- `pydantic`: For data validation and settings management
 
-    ```bash
-    apify login
-    ```
+## License
 
-2. Deploy your Actor. This command will deploy and build the Actor on the Apify Platform. You can find your newly created Actor under [Actors -> My Actors](https://console.apify.com/actors?tab=my).
-
-    ```bash
-    apify push
-    ```
-
-## Documentation reference
-
-To learn more about Apify and Actors, take a look at the following resources:
-
-- [Apify SDK for JavaScript documentation](https://docs.apify.com/sdk/js)
-- [Apify SDK for Python documentation](https://docs.apify.com/sdk/python)
-- [Apify Platform documentation](https://docs.apify.com/platform)
-- [Join our developer community on Discord](https://discord.com/invite/jyEM2PRvMU)
+This project is licensed under the MIT License.

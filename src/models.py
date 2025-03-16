@@ -103,4 +103,12 @@ class CompanyLinks(BaseModel):
     """Model for storing company profile URLs"""
     linkedin_url: str = Field(..., description="URL of the company's LinkedIn profile")
     crunchbase_url: str = Field(..., description="URL of the company's Crunchbase profile")
+    sector_index: str = Field(..., description="Sector-specific index ticker (e.g., ^XLF for financials)")
+
+
+class SectorIndex(BaseModel):
+    """Model for storing sector index information"""
+    ticker: str = Field(..., description="Ticker symbol of the sector-specific index, e.g. ^XLF")
+    sector_name: Optional[str] = Field(None, description="Name of the sector, e.g. Financials")
+    description: Optional[str] = Field(None, description="Brief description of the sector index")
 

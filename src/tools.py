@@ -16,124 +16,182 @@ async def get_yahoo_finance_data(end_date: str, start_date: str, ticker: str) ->
     """Get Yahoo Finance data for a given ticker and date range.
     
     Args:
-        end_date: The end date of the data to retrieve. Format: YYYY-MM-DD
-        start_date: The start date of the data to retrieve. Format: YYYY-MM-DD
-        ticker: The ticker of the company to retrieve data for
+        end_date: The end date in YYYY-MM-DD format
+        start_date: The start date in YYYY-MM-DD format
+        ticker: The ticker symbol to get data for
         
     Returns:
-        YahooFinanceData object containing the processed data
+        A YahooFinanceData object containing the data
     """
     if not _client:
         raise ValueError("ApifyClient not initialized. Call set_client first.")
         
-    Actor.log.info(f"Getting Yahoo Finance data for: {ticker} ({end_date} - {start_date})")
+    Actor.log.info(f"Getting Yahoo Finance data for: {ticker} ({start_date} to {end_date})")
+    
+    # Check if ticker is an index (starts with ^)
+    is_index = ticker.startswith("^")
+    
     run_input = {
         "endDate": end_date,
         "startDate": start_date,
         "ticker": ticker
     }
-    run = _client.actor("harvest/yahoo-finance-scraper").call(run_input=run_input, memory_mbytes=128)
     
-    # Get the raw items from the dataset
-    list_page = _client.dataset(run["defaultDatasetId"]).list_items()
-    
-    if not list_page.items:
-        raise ValueError(f"No data found for ticker {ticker}")
-        
-    # Get the first item which contains all the data
-    data = list_page.items[0]
-    
-    # Process the data into our models
-    summary_detail = YahooFinanceSummaryDetail(
-        previous_close=data["results"]["summaryDetail"]["previousClose"],
-        open=data["results"]["summaryDetail"]["open"],
-        day_low=data["results"]["summaryDetail"]["dayLow"],
-        day_high=data["results"]["summaryDetail"]["dayHigh"],
-        volume=data["results"]["summaryDetail"]["volume"],
-        average_volume=data["results"]["summaryDetail"]["averageVolume"],
-        market_cap=data["results"]["summaryDetail"]["marketCap"],
-        fifty_two_week_low=data["results"]["summaryDetail"]["fiftyTwoWeekLow"],
-        fifty_two_week_high=data["results"]["summaryDetail"]["fiftyTwoWeekHigh"],
-        price_to_sales_trailing_12_months=data["results"]["summaryDetail"]["priceToSalesTrailing12Months"],
-        fifty_day_average=data["results"]["summaryDetail"]["fiftyDayAverage"],
-        two_hundred_day_average=data["results"]["summaryDetail"]["twoHundredDayAverage"],
-        trailing_pe=data["results"]["summaryDetail"]["trailingPE"],
-        forward_pe=data["results"]["summaryDetail"]["forwardPE"],
-        dividend_rate=data["results"]["summaryDetail"]["dividendRate"],
-        dividend_yield=data["results"]["summaryDetail"]["dividendYield"],
-        payout_ratio=data["results"]["summaryDetail"]["payoutRatio"],
-        beta=data["results"]["summaryDetail"]["beta"]
-    )
-    
-    price = YahooFinancePrice(
-        regular_market_price=data["results"]["price"]["regularMarketPrice"],
-        regular_market_change=data["results"]["price"]["regularMarketChange"],
-        regular_market_change_percent=data["results"]["price"]["regularMarketChangePercent"],
-        regular_market_time=data["results"]["price"]["regularMarketTime"],
-        regular_market_volume=data["results"]["price"]["regularMarketVolume"],
-        regular_market_day_high=data["results"]["price"]["regularMarketDayHigh"],
-        regular_market_day_low=data["results"]["price"]["regularMarketDayLow"],
-        regular_market_previous_close=data["results"]["price"]["regularMarketPreviousClose"],
-        regular_market_open=data["results"]["price"]["regularMarketOpen"],
-        exchange=data["results"]["price"]["exchange"],
-        exchange_name=data["results"]["price"]["exchangeName"],
-        market_state=data["results"]["price"]["marketState"],
-        quote_type=data["results"]["price"]["quoteType"],
-        symbol=data["results"]["price"]["symbol"],
-        short_name=data["results"]["price"]["shortName"],
-        long_name=data["results"]["price"]["longName"],
-        currency=data["results"]["price"]["currency"],
-        market_cap=data["results"]["price"]["marketCap"]
-    )
-    
-    quotes = [
-        YahooFinanceQuote(
-            date=quote["date"],
-            high=quote["high"],
-            volume=quote["volume"],
-            open=quote["open"],
-            low=quote["low"],
-            close=quote["close"],
-            adjclose=quote["adjclose"]
-        )
-        for quote in data["chart"]["quotes"]
-    ]
-    
-    news = [
-        YahooFinanceNews(
-            uuid=item["uuid"],
-            title=item["title"],
-            publisher=item["publisher"],
-            link=item["link"],
-            provider_publish_time=item["providerPublishTime"],
-            type=item["type"],
-            related_tickers=item["relatedTickers"]
-        )
-        for item in data["news"]
-    ]
-    
-    # Create the final data object
-    yahoo_data = YahooFinanceData(
-        summary_detail=summary_detail,
-        price=price,
-        quotes=quotes,
-        news=news,
-        ticker=ticker,
-        start_date=start_date,
-        end_date=end_date
-    )
-    
-    # Store the data in the key-value store
     try:
-        default_store = await Actor.open_key_value_store()
-        kv_key = f"yahoo_finance_{ticker}_{start_date}_{end_date}"
-        await default_store.set_value(kv_key, yahoo_data.model_dump())
+        run = _client.actor("harvest/yahoo-finance-scraper").call(run_input=run_input, memory_mbytes=128)
+        list_page = _client.dataset(run["defaultDatasetId"]).list_items()
+        if not list_page.items:
+            raise ValueError(f"No data found for {ticker}")
+        data = list_page.items[0]
+        
+        # Process the data into our models
+        summary_detail_data = data["results"]["summaryDetail"]
+        
+        # Use default values for fields that might be missing in indices
+        summary_detail = YahooFinanceSummaryDetail(
+            previous_close=summary_detail_data.get("previousClose", 0.0),
+            open=summary_detail_data.get("open", 0.0),
+            day_low=summary_detail_data.get("dayLow", 0.0),
+            day_high=summary_detail_data.get("dayHigh", 0.0),
+            volume=summary_detail_data.get("volume", 0),
+            average_volume=summary_detail_data.get("averageVolume", 0),
+            market_cap=summary_detail_data.get("marketCap", 0.0) if not is_index else 0.0,
+            fifty_two_week_low=summary_detail_data.get("fiftyTwoWeekLow", 0.0),
+            fifty_two_week_high=summary_detail_data.get("fiftyTwoWeekHigh", 0.0),
+            price_to_sales_trailing_12_months=summary_detail_data.get("priceToSalesTrailing12Months", 0.0) if not is_index else 0.0,
+            fifty_day_average=summary_detail_data.get("fiftyDayAverage", 0.0),
+            two_hundred_day_average=summary_detail_data.get("twoHundredDayAverage", 0.0),
+            trailing_pe=summary_detail_data.get("trailingPE", 0.0) if not is_index else 0.0,
+            forward_pe=summary_detail_data.get("forwardPE", 0.0) if not is_index else 0.0,
+            dividend_rate=summary_detail_data.get("dividendRate", 0.0),
+            dividend_yield=summary_detail_data.get("dividendYield", 0.0),
+            payout_ratio=summary_detail_data.get("payoutRatio", 0.0) if not is_index else 0.0,
+            beta=summary_detail_data.get("beta", 0.0) if not is_index else 0.0
+        )
+        
+        price_data = data["results"]["price"]
+        price = YahooFinancePrice(
+            regular_market_price=price_data.get("regularMarketPrice", 0.0),
+            regular_market_change=price_data.get("regularMarketChange", 0.0),
+            regular_market_change_percent=price_data.get("regularMarketChangePercent", 0.0),
+            regular_market_time=price_data.get("regularMarketTime", ""),
+            regular_market_volume=price_data.get("regularMarketVolume", 0),
+            regular_market_day_high=price_data.get("regularMarketDayHigh", 0.0),
+            regular_market_day_low=price_data.get("regularMarketDayLow", 0.0),
+            regular_market_previous_close=price_data.get("regularMarketPreviousClose", 0.0),
+            regular_market_open=price_data.get("regularMarketOpen", 0.0),
+            exchange=price_data.get("exchange", ""),
+            exchange_name=price_data.get("exchangeName", ""),
+            market_state=price_data.get("marketState", ""),
+            quote_type=price_data.get("quoteType", ""),
+            symbol=price_data.get("symbol", ticker),
+            short_name=price_data.get("shortName", ""),
+            long_name=price_data.get("longName", ""),
+            currency=price_data.get("currency", "USD"),
+            market_cap=price_data.get("marketCap", 0.0) if not is_index else 0.0
+        )
+        
+        quotes = []
+        for quote_data in data["chart"]["quotes"]:
+            quotes.append(YahooFinanceQuote(
+                date=quote_data.get("date", ""),
+                high=quote_data.get("high", 0.0),
+                volume=quote_data.get("volume", 0),
+                open=quote_data.get("open", 0.0),
+                low=quote_data.get("low", 0.0),
+                close=quote_data.get("close", 0.0),
+                adjclose=quote_data.get("adjclose", 0.0)
+            ))
+        
+        news = []
+        for news_item in data.get("news", []):
+            news.append(YahooFinanceNews(
+                uuid=news_item.get("uuid", ""),
+                title=news_item.get("title", ""),
+                publisher=news_item.get("publisher", ""),
+                link=news_item.get("link", ""),
+                provider_publish_time=news_item.get("providerPublishTime", ""),
+                type=news_item.get("type", ""),
+                related_tickers=news_item.get("relatedTickers", [])
+            ))
+        
+        # Create the final data object
+        yahoo_data = YahooFinanceData(
+            summary_detail=summary_detail,
+            price=price,
+            quotes=quotes,
+            news=news,
+            ticker=ticker,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        # Store the data in the key-value store
+        try:
+            default_store = await Actor.open_key_value_store()
+            kv_key = f"yahoo_finance_{ticker}_{start_date}_{end_date}"
+            await default_store.set_value(kv_key, yahoo_data.model_dump())
+        except Exception as e:
+            Actor.log.warning(f"Failed to store Yahoo Finance data: {str(e)}")
+        
+        Actor.log.info(f"Successfully processed Yahoo Finance data for: {ticker}. Extracted {len(news)} news items and {len(quotes)} quotes.")
+        await Actor.charge('tool_result', 1)
+        return yahoo_data
+        
     except Exception as e:
-        Actor.log.warning(f"Failed to store Yahoo Finance data: {str(e)}")
-    
-    Actor.log.info(f"Successfully processed Yahoo Finance data for: {ticker}. Extracted {len(news)} news items and {len(quotes)} quotes.")
-    await Actor.charge('tool_result', 1)
-    return yahoo_data 
+        Actor.log.error(f"Error getting Yahoo Finance data for {ticker}: {str(e)}")
+        # Initialize with default values instead of empty constructor
+        default_summary_detail = YahooFinanceSummaryDetail(
+            previous_close=0.0,
+            open=0.0,
+            day_low=0.0,
+            day_high=0.0,
+            volume=0,
+            average_volume=0,
+            market_cap=0.0,
+            fifty_two_week_low=0.0,
+            fifty_two_week_high=0.0,
+            price_to_sales_trailing_12_months=0.0,
+            fifty_day_average=0.0,
+            two_hundred_day_average=0.0,
+            trailing_pe=0.0,
+            forward_pe=0.0,
+            dividend_rate=0.0,
+            dividend_yield=0.0,
+            payout_ratio=0.0,
+            beta=0.0
+        )
+        
+        default_price = YahooFinancePrice(
+            regular_market_price=0.0,
+            regular_market_change=0.0,
+            regular_market_change_percent=0.0,
+            regular_market_time="",
+            regular_market_volume=0,
+            regular_market_day_high=0.0,
+            regular_market_day_low=0.0,
+            regular_market_previous_close=0.0,
+            regular_market_open=0.0,
+            exchange="",
+            exchange_name="",
+            market_state="",
+            quote_type="",
+            symbol=ticker,
+            short_name=f"Default ({ticker})",
+            long_name=f"Default Index ({ticker})",
+            currency="USD",
+            market_cap=0.0
+        )
+        
+        return YahooFinanceData(
+            summary_detail=default_summary_detail,
+            price=default_price,
+            quotes=[],
+            news=[],
+            ticker=ticker,
+            start_date=start_date,
+            end_date=end_date
+        )
 
 async def get_linkedin_company_profile(
     linkedin_company_url: str
