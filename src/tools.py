@@ -135,7 +135,7 @@ async def get_yahoo_finance_data(end_date: str, start_date: str, ticker: str) ->
             Actor.log.warning(f"Failed to store Yahoo Finance data: {str(e)}")
         
         Actor.log.info(f"Successfully processed Yahoo Finance data for: {ticker}. Extracted {len(news)} news items and {len(quotes)} quotes.")
-        await Actor.charge('tool_result', 1)
+        await Actor.charge('tool-result', 1)
         return yahoo_data
         
     except Exception as e:
@@ -246,7 +246,7 @@ async def get_linkedin_company_profile(
                 specialties=[s["value"] for s in item.get("specialties", [])],
                 address=address
             )
-        await Actor.charge('tool_result', 1)
+        await Actor.charge('tool-result', 1)
         return LinkedInData()
 
     except Exception as e:
@@ -307,7 +307,7 @@ async def search_google(ctx: RunContext, query: str, max_results: int = 1) -> Li
             results.append(formatted_result)
             
     Actor.log.info(f"Found {len(results)}/{max_results} search results for: {query}")
-    await Actor.charge('tool_result', len(results))
+    await Actor.charge('tool-result', len(results))
     return results 
 
 
@@ -336,9 +336,9 @@ async def get_crunchbase_company_details(crunchbase_company_url: str) -> List[st
     if list_page.items:
         result = list_page.items[0]
         Actor.log.info(f"Retrieved Crunchbase data for: {crunchbase_company_url}")
-        await Actor.charge('tool_result', 1)
+        await Actor.charge('tool-result', 1)
         return [result]
     else:
         Actor.log.warning(f"No data found for Crunchbase URL: {crunchbase_company_url}")
-        await Actor.charge('tool_result', 0)
+        await Actor.charge('tool-result', 0)
         return []
